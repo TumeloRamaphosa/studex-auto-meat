@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Auto-Meat Command Centre — Ultimate</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --panel: #121a31;
+      --soft: #1a2442;
+      --text: #e9eeff;
+      --muted: #a9b4d8;
+      --accent: #76f2c9;
+      --warn: #ffb86b;
+      --danger: #ff7f9f;
+      --ok: #93ffb4;
+      --border: #2a3764;
+      --shadow: 0 8px 24px rgba(0,0,0,.35);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      background: linear-gradient(180deg, #090e1d, var(--bg));
+      color: var(--text);
+      min-height: 100vh;
+    }
+    .wrap { max-width: 1200px; margin: 0 auto; padding: 18px; }
+    .top {
+      display: flex; gap: 12px; align-items: center; justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    h1 { margin: 0; font-size: 1.3rem; }
+    .sub { color: var(--muted); font-size: .92rem; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 12px;
+    }
+    .card {
+      background: rgba(18,26,49,.96);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      padding: 14px;
+    }
+    .c4 { grid-column: span 4; }
+    .c6 { grid-column: span 6; }
+    .c8 { grid-column: span 8; }
+    .c12 { grid-column: span 12; }
+    @media (max-width: 980px) {
+      .c4,.c6,.c8 { grid-column: span 12; }
+    }
+    .card h2 { margin: 0 0 10px; font-size: 1rem; }
+    .muted { color: var(--muted); }
+    .kpis { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; }
+    .kpi { background: var(--soft); padding: 10px; border-radius: 10px; border: 1px solid var(--border); }
+    .kpi .v { font-size: 1.15rem; font-weight: 700; }
+    .kpi .l { font-size: .78rem; color: var(--muted); }
+    @media (max-width: 700px) { .kpis { grid-template-columns: repeat(2,1fr);} }
+
+    input, select, textarea, button {
+      border-radius: 10px; border: 1px solid var(--border);
+      background: #0f1731; color: var(--text);
+      padding: 9px 10px; font: inherit;
+    }
+    textarea { width: 100%; min-height: 80px; resize: vertical; }
+    input, select { width: 100%; }
+    button { cursor: pointer; background: #16224a; }
+    button.primary { background: #1b5f4b; border-color: #1f8d6b; }
+    button.ghost { background: transparent; }
+    button.warn { background: #55391c; border-color: #8a5f29; }
+    button.danger { background: #542035; border-color: #8e2f56; }
+
+    .row { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 8px; }
+    @media (max-width: 760px) { .row { grid-template-columns: 1fr; } }
+
+    .list { display: grid; gap: 8px; margin-top: 10px; }
+    .item {
+      border: 1px solid var(--border); background: #101a36;
+      border-radius: 10px; padding: 10px;
+      display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center;
+    }
+    .item.done .title { text-decoration: line-through; color: var(--muted); }
+    .pill {
+      padding: 2px 8px; border-radius: 999px; font-size: .74rem;
+      border: 1px solid var(--border); background: #12214c; color: #cbd7ff;
+    }
+    .priority-high { color: #ffd5df; background: #3a1630; border-color: #6d2a52; }
+    .priority-med { color: #ffe6cc; background: #3d2814; border-color: #704f2b; }
+    .priority-low { color: #d5ffe5; background: #123226; border-color: #2a6b51; }
+    .toolbar { display:flex; flex-wrap: wrap; gap: 8px; align-items:center; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+    .small { font-size: .85rem; }
+    .tag { background: #102246; border:1px solid #2a4f97; border-radius: 8px; padding: 4px 8px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div>
+        <h1>🥩 Auto‑Meat Command Centre — Ultimate</h1>
+        <div class="sub">Naledi content ops, Monday meeting prep, and workflow tracker</div>
+      </div>
+      <div class="toolbar">
+        <button id="btnSeed" class="ghost">Seed Sample Data</button>
+        <button id="btnExport" class="warn">Export JSON</button>
+        <button id="btnImport" class="ghost">Import JSON</button>
+        <input id="importFile" type="file" accept="application/json" hidden />
+        <button id="btnReset" class="danger">Reset</button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <section class="card c12">
+        <h2>Snapshot</h2>
+        <div class="kpis" id="kpis"></div>
+      </section>
+
+      <section class="card c8">
+        <h2>Monday Meeting Planner</h2>
+        <div class="row">
+          <input id="meetingTopic" placeholder="Agenda item / outcome" />
+          <select id="meetingOwner">
+            <option value="Tumelo">Owner: Tumelo</option>
+            <option value="CMO">CMO</option>
+            <option value="CTO">CTO</option>
+            <option value="COO">COO</option>
+            <option value="CFO">CFO</option>
+            <option value="CRO">CRO</option>
+          </select>
+          <select id="meetingPriority">
+            <option value="high">Priority: High</option>
+            <option value="med">Priority: Medium</option>
+            <option value="low">Priority: Low</option>
+          </select>
+          <button id="addMeeting" class="primary">Add</button>
+        </div>
+        <div class="list" id="meetingList"></div>
+      </section>
+
+      <section class="card c4">
+        <h2>Quick Notes</h2>
+        <textarea id="notes" placeholder="Key talking points, blockers, links..."></textarea>
+        <div class="toolbar" style="margin-top:8px;">
+          <button id="saveNotes" class="primary">Save Notes</button>
+          <span id="notesStatus" class="small muted"></span>
+        </div>
+      </section>
+
+      <section class="card c6">
+        <h2>Workflow Stages</h2>
+        <div class="row" style="grid-template-columns: 2fr 1fr auto;">
+          <input id="stageName" placeholder="Stage (e.g., Script / Image / Video / Post)" />
+          <select id="stageStatus">
+            <option value="todo">To Do</option>
+            <option value="doing">Doing</option>
+            <option value="done">Done</option>
+          </select>
+          <button id="addStage">Add</button>
+        </div>
+        <div class="list" id="stageList"></div>
+      </section>
+
+      <section class="card c6">
+        <h2>Content Pipeline</h2>
+        <div class="row" style="grid-template-columns: 2fr 1fr 1fr auto;">
+          <input id="contentTitle" placeholder="Content title" />
+          <select id="contentPlatform">
+            <option>Instagram</option><option>TikTok</option><option>YouTube Shorts</option><option>X</option>
+          </select>
+          <select id="contentStatus">
+            <option value="idea">Idea</option>
+            <option value="scripted">Scripted</option>
+            <option value="produced">Produced</option>
+            <option value="scheduled">Scheduled</option>
+            <option value="posted">Posted</option>
+          </select>
+          <button id="addContent">Add</button>
+        </div>
+        <div class="list" id="contentList"></div>
+      </section>
+
+      <section class="card c12">
+        <h2>Auto Summary</h2>
+        <div id="summary" class="muted"></div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const KEY = 'auto-meat-command-centre-v1';
+    const $ = (id) => document.getElementById(id);
+
+    const state = load() || {
+      notes: '',
+      meeting: [],
+      stages: [],
+      content: []
+    };
+
+    function uid() { return Math.random().toString(36).slice(2, 9); }
+    function save() { localStorage.setItem(KEY, JSON.stringify(state)); render(); }
+    function load() {
+      try { return JSON.parse(localStorage.getItem(KEY)); } catch { return null; }
+    }
+
+    function kpiData() {
+      const meetingOpen = state.meeting.filter(x => !x.done).length;
+      const stagesDone = state.stages.filter(x => x.status === 'done').length;
+      const contentPosted = state.content.filter(x => x.status === 'posted').length;
+      const contentTotal = state.content.length;
+      return [
+        { label: 'Monday Items Open', value: meetingOpen },
+        { label: 'Workflow Stages Done', value: stagesDone + '/' + state.stages.length },
+        { label: 'Posts Published', value: contentPosted },
+        { label: 'Pipeline Size', value: contentTotal }
+      ];
+    }
+
+    function renderKpis() {
+      $('kpis').innerHTML = kpiData().map(k => `
+        <div class="kpi"><div class="v">${k.value}</div><div class="l">${k.label}</div></div>
+      `).join('');
+    }
+
+    function priorityPill(p) {
+      const c = p === 'high' ? 'priority-high' : p === 'med' ? 'priority-med' : 'priority-low';
+      const t = p === 'high' ? 'High' : p === 'med' ? 'Medium' : 'Low';
+      return `<span class="pill ${c}">${t}</span>`;
+    }
+
+    function renderMeeting() {
+      const list = $('meetingList');
+      if (!state.meeting.length) {
+        list.innerHTML = '<div class="muted small">No Monday agenda items yet.</div>';
+        return;
+      }
+      list.innerHTML = state.meeting.map(item => `
+        <div class="item ${item.done ? 'done':''}">
+          <input type="checkbox" ${item.done ? 'checked':''} onchange="toggleMeeting('${item.id}')" />
+          <div>
+            <div class="title">${escapeHtml(item.topic)}</div>
+            <div class="small muted">Owner: ${escapeHtml(item.owner)} · ${priorityPill(item.priority)}</div>
+          </div>
+          <button class="danger" onclick="removeMeeting('${item.id}')">Delete</button>
+        </div>
+      `).join('');
+    }
+
+    function renderStages() {
+      const list = $('stageList');
+      if (!state.stages.length) {
+        list.innerHTML = '<div class="muted small">No stages yet.</div>';
+        return;
+      }
+      list.innerHTML = state.stages.map(s => `
+        <div class="item">
+          <span class="tag mono">${escapeHtml(s.status.toUpperCase())}</span>
+          <div>${escapeHtml(s.name)}</div>
+          <div class="toolbar">
+            <button onclick="cycleStage('${s.id}')">Next</button>
+            <button class="danger" onclick="removeStage('${s.id}')">Delete</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderContent() {
+      const list = $('contentList');
+      if (!state.content.length) {
+        list.innerHTML = '<div class="muted small">No content items yet.</div>';
+        return;
+      }
+      list.innerHTML = state.content.map(c => `
+        <div class="item">
+          <span class="tag">${escapeHtml(c.status)}</span>
+          <div>
+            <div>${escapeHtml(c.title)}</div>
+            <div class="small muted">${escapeHtml(c.platform)}</div>
+          </div>
+          <div class="toolbar">
+            <button onclick="cycleContent('${c.id}')">Next</button>
+            <button class="danger" onclick="removeContent('${c.id}')">Delete</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderSummary() {
+      const openHigh = state.meeting.filter(i => !i.done && i.priority === 'high').length;
+      const doing = state.stages.filter(s => s.status === 'doing').length;
+      const scheduled = state.content.filter(c => c.status === 'scheduled').length;
+      $('summary').textContent = `Focus now: ${openHigh} high-priority Monday agenda item(s), ${doing} workflow stage(s) in progress, and ${scheduled} content item(s) scheduled.`;
+    }
+
+    function render() {
+      $('notes').value = state.notes || '';
+      renderKpis(); renderMeeting(); renderStages(); renderContent(); renderSummary();
+    }
+
+    function escapeHtml(str='') {
+      return str.replace(/[&<>'"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','\'':'&#39;','"':'&quot;'}[m]));
+    }
+
+    window.toggleMeeting = (id) => {
+      const x = state.meeting.find(i => i.id === id); if (!x) return; x.done = !x.done; save();
+    };
+    window.removeMeeting = (id) => { state.meeting = state.meeting.filter(i => i.id !== id); save(); };
+    window.removeStage = (id) => { state.stages = state.stages.filter(i => i.id !== id); save(); };
+    window.removeContent = (id) => { state.content = state.content.filter(i => i.id !== id); save(); };
+
+    window.cycleStage = (id) => {
+      const order = ['todo','doing','done'];
+      const s = state.stages.find(x => x.id === id); if (!s) return;
+      s.status = order[(order.indexOf(s.status)+1) % order.length]; save();
+    };
+
+    window.cycleContent = (id) => {
+      const order = ['idea','scripted','produced','scheduled','posted'];
+      const c = state.content.find(x => x.id === id); if (!c) return;
+      c.status = order[(order.indexOf(c.status)+1) % order.length]; save();
+    };
+
+    $('addMeeting').onclick = () => {
+      const topic = $('meetingTopic').value.trim();
+      if (!topic) return;
+      state.meeting.unshift({ id: uid(), topic, owner: $('meetingOwner').value, priority: $('meetingPriority').value, done: false });
+      $('meetingTopic').value = ''; save();
+    };
+
+    $('saveNotes').onclick = () => {
+      state.notes = $('notes').value;
+      localStorage.setItem(KEY, JSON.stringify(state));
+      $('notesStatus').textContent = 'Saved ✓';
+      setTimeout(() => $('notesStatus').textContent = '', 1200);
+      render();
+    };
+
+    $('addStage').onclick = () => {
+      const name = $('stageName').value.trim();
+      if (!name) return;
+      state.stages.unshift({ id: uid(), name, status: $('stageStatus').value });
+      $('stageName').value = ''; save();
+    };
+
+    $('addContent').onclick = () => {
+      const title = $('contentTitle').value.trim();
+      if (!title) return;
+      state.content.unshift({ id: uid(), title, platform: $('contentPlatform').value, status: $('contentStatus').value });
+      $('contentTitle').value = ''; save();
+    };
+
+    $('btnExport').onclick = () => {
+      const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'auto-meat-command-centre-data.json';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    };
+
+    $('btnImport').onclick = () => $('importFile').click();
+    $('importFile').onchange = async (e) => {
+      const file = e.target.files?.[0]; if (!file) return;
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        if (!data || typeof data !== 'object') throw new Error('Invalid data');
+        state.notes = data.notes || '';
+        state.meeting = Array.isArray(data.meeting) ? data.meeting : [];
+        state.stages = Array.isArray(data.stages) ? data.stages : [];
+        state.content = Array.isArray(data.content) ? data.content : [];
+        save();
+      } catch { alert('Could not import JSON file.'); }
+    };
+
+    $('btnReset').onclick = () => {
+      if (!confirm('Reset all local data for this dashboard?')) return;
+      state.notes = ''; state.meeting = []; state.stages = []; state.content = []; save();
+    };
+
+    $('btnSeed').onclick = () => {
+      if (state.meeting.length || state.stages.length || state.content.length) {
+        if (!confirm('Replace with sample data?')) return;
+      }
+      state.meeting = [
+        { id: uid(), topic: 'Approve Monday content calendar', owner: 'CMO', priority: 'high', done: false },
+        { id: uid(), topic: 'Finalize n8n auto-post flow', owner: 'CTO', priority: 'high', done: false },
+        { id: uid(), topic: 'Review budget for paid amplification', owner: 'CFO', priority: 'med', done: false }
+      ];
+      state.stages = [
+        { id: uid(), name: 'Script generation (Claude/GPT)', status: 'doing' },
+        { id: uid(), name: 'Image generation (Gemini/Kling)', status: 'todo' },
+        { id: uid(), name: 'Video+voice pipeline', status: 'todo' }
+      ];
+      state.content = [
+        { id: uid(), title: 'Naledi Lab Day: Protein for Focus', platform: 'Instagram', status: 'scripted' },
+        { id: uid(), title: 'Squash Recovery Meal', platform: 'TikTok', status: 'idea' }
+      ];
+      state.notes = 'Monday meeting objective: lock weekly cadence and launch first 3 posts.';
+      save();
+    };
+
+    render();
+  </script>
+</body>
+</html>
