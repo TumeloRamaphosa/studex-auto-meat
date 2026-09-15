@@ -1,0 +1,284 @@
+{
+  "workflows": [
+    {
+      "name": "Lead → Qualify → Invoice",
+      "id": "lead_flow",
+      "description": "Complete lead-to-deal pipeline: intake (Hermes) → qualify → invoice (CashClaw)",
+      "nodes": [
+        {
+          "name": "WhatsApp Webhook",
+          "type": "webhook",
+          "config": { "trigger": "message_received" }
+        },
+        {
+          "name": "Parse Lead",
+          "type": "code",
+          "config": { "extract": ["name", "product", "budget", "timeline"] }
+        },
+        {
+          "name": "Route to Hermes",
+          "type": "http",
+          "config": {
+            "method": "POST",
+            "url": "http://localhost:3000/agents/hermes/qualify",
+            "body": "{{ lead }}"
+          }
+        },
+        {
+          "name": "Wait for Qualification",
+          "type": "delay",
+          "config": { "delay": 30 }
+        },
+        {
+          "name": "Check: Qualified?",
+          "type": "condition",
+          "config": { "check": "{{ hermes.qualified }}" }
+        },
+        {
+          "name": "If Qualified → Invoice",
+          "type": "http",
+          "config": {
+            "method": "POST",
+            "url": "http://localhost:3000/agents/cashclaw/invoice",
+            "body": "{{ hermes.deal_data }}"
+          }
+        },
+        {
+          "name": "Log to Notion",
+          "type": "notion",
+          "config": {
+            "database_id": "{{ NOTION_STUDBOT_DB_ID }}",
+            "properties": {
+              "Name": "{{ lead.name }}",
+              "Status": "{{ hermes.qualified ? 'Qualified' : 'Not Qualified' }}",
+              "Value": "{{ hermes.deal_data.amount }}",
+              "Invoice": "{{ cashclaw.invoice_id }}"
+            }
+          }
+        },
+        {
+          "name": "Save to Obsidian",
+          "type": "http",
+          "config": {
+            "method": "POST",
+            "url": "http://localhost:3000/agents/obsidian/write",
+            "body": {
+              "path": "Agents/Sessions/Hermes/{{ now | date:'YYYY-MM-DD' }}.md",
+              "content": "# Lead: {{ lead.name }}\n\nStatus: {{ hermes.qualified ? 'QUALIFIED' : 'REJECTED' }}\nAmount: R{{ hermes.deal_data.amount }}\nInvoice: {{ cashclaw.invoice_id }}\n\nNotes: {{ hermes.notes }}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Content → Generate → Post",
+      "id": "content_flow",
+      "description": "Content creation pipeline: request → generate (Naledi) → post (Blotato)",
+      "nodes": [
+        {
+          "name": "Manual Trigger",
+          "type": "trigger",
+          "config": { "trigger": "manual" }
+        },
+        {
+          "name": "Content Brief",
+          "type": "form",
+          "config": { "fields": ["product", "audience", "tone", "platforms"] }
+        },
+        {
+          "name": "Generate Copy",
+          "type": "http",
+          "config": {
+            "method": "POST",
+            "url": "http://localhost:3000/content/generate-copy",
+            "body": "{{ brief }}"
+          }
+        },
+        {
+          "name": "Generate Image",
+          "type": "http",
+          "config": {
+            "method": "POST",
+            "url": "http://localhost:3000/content/generate-image",
+            "body": { "prompt": "{{ content.copy | head:50 }}", "style": "luxury" }
+          }
+        },
+        {
+          "name": "Generate Video",
+          "type": "http",
+          "config": {
+            "method": "POST",
+            "url": "http://localhost:3000/content/generate-video",
+            "body": { "script": "{{ content.copy }}", "persona": "Naledi", "duration": 60 }
+          }
+        },
+        {
+          "name": "Post to Blotato",
+          "type": "http",
+          "config": {
+            "method": "POST",
+            "url": "https://api.blotato.com/v1/posts/schedule",
+            "headers": { "Authorization": "Bearer {{ BLOTATO_API_KEY }}" },
+            "body": {
+              "content": "{{ content.copy }}",
+              "platforms": "{{ brief.platforms }}",
+              "schedule_time": "now"
+            }
+          }
+        },
+        {
+          "name": "Log to Notion",
+          "type": "notion",
+          "config": {
+            "database_id": "{{ NOTION_CAMPAIGN_DB_ID }}",
+            "properties": {
+              "Product": "{{ brief.product }}",
+              "Platforms": "{{ brief.platforms | join:',' }}",
+              "Posted": true,
+              "Copy": "{{ content.copy | truncate:200 }}",
+              "Timestamp": "{{ now | date:'YYYY-MM-DD HH:mm' }}"
+            }
+          }
+        },
+        {
+          "name": "Save to Obsidian",
+          "type": "http",
+          "config": {
+            "method": "POST",
+            "url": "http://localhost:3000/agents/obsidian/write",
+            "body": {
+              "path": "Agents/Sessions/Naledi/{{ now | date:'YYYY-MM-DD' }}.md",
+              "content": "# Content Created: {{ brief.product }}\n\n## Copy\n{{ content.copy }}\n\n## Platforms\n{{ brief.platforms | join:' | ' }}\n\n## Status\n✅ Posted at {{ now | date:'HH:mm SAST' }}\n\n## Performance\n- Image: {{ image.url }}\n- Video: {{ video.task_id }}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Daily Briefing (7:30 AM SAST)",
+      "id": "daily_briefing",
+      "description": "Morning briefing: compile metrics, schedule posts, alert agents",
+      "nodes": [
+        {
+          "name": "Schedule Trigger",
+          "type": "cron",
+          "config": { "schedule": "30 7 * * *", "timezone": "Africa/Johannesburg" }
+        },
+        {
+          "name": "Get Yesterday's Metrics",
+          "type": "http",
+          "config": {
+            "method": "POST",
+            "url": "http://localhost:3000/content/metrics",
+            "body": { "period": "yesterday" }
+          }
+        },
+        {
+          "name": "Get Queue Status",
+          "type": "http",
+          "config": { "method": "GET", "url": "http://localhost:3000/agents" }
+        },
+        {
+          "name": "Generate Today's Schedule",
+          "type": "code",
+          "config": { "script": "return { posts: 3, priority: ['Meat', 'Markets'] }" }
+        },
+        {
+          "name": "Post Schedule via Blotato",
+          "type": "http",
+          "config": {
+            "method": "POST",
+            "url": "https://api.blotato.com/v1/posts/schedule",
+            "body": { "schedule": "{{ schedule }}" }
+          }
+        },
+        {
+          "name": "Alert Agents",
+          "type": "email",
+          "config": {
+            "to": ["naledi@studex.dev", "hermes@studex.dev", "cashclaw@studex.dev"],
+            "subject": "🌅 Daily Briefing — {{ now | date:'YYYY-MM-DD' }}",
+            "body": "Yesterday: {{ metrics.impressions }} impressions, {{ metrics.leads }} leads, R{{ metrics.revenue }} revenue\n\nToday: {{ schedule.posts }} posts planned"
+          }
+        },
+        {
+          "name": "Save Briefing to Obsidian",
+          "type": "http",
+          "config": {
+            "method": "POST",
+            "url": "http://localhost:3000/agents/obsidian/write",
+            "body": {
+              "path": "RALF/{{ now | date:'YYYY-MM-DD' }}.md",
+              "content": "# Daily Briefing — {{ now | date:'YYYY-MM-DD SAST' }}\n\n## Yesterday's Performance\n- Impressions: {{ metrics.impressions }}\n- Engagement: {{ metrics.engagement_rate }}%\n- Leads: {{ metrics.leads }}\n- Revenue: R{{ metrics.revenue }}\n\n## Today's Plan\n- Posts: {{ schedule.posts }}\n- Priority: {{ schedule.priority | join:', ' }}\n- Agents: {{ agents | map:'name' | join:', ' }}\n\n## Queue\n- Tasks: {{ agents | map:'queued_tasks' | sum }}\n- Status: Ready"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Base44 Sync (Hourly)",
+      "id": "base44_sync",
+      "description": "Sync Base44 cloud agents: receive sales pipeline, send order updates",
+      "nodes": [
+        {
+          "name": "Cron Trigger",
+          "type": "cron",
+          "config": { "schedule": "0 * * * *" }
+        },
+        {
+          "name": "Fetch Base44 Pipeline",
+          "type": "http",
+          "config": {
+            "method": "GET",
+            "url": "https://base44.com/api/sales-pipeline",
+            "headers": { "Authorization": "Bearer {{ BASE44_API_KEY }}" }
+          }
+        },
+        {
+          "name": "Update Shopify Inventory",
+          "type": "http",
+          "config": {
+            "method": "POST",
+            "url": "http://localhost:3000/mcp/shopify/update-inventory",
+            "body": { "pipeline": "{{ base44.pipeline }}" }
+          }
+        },
+        {
+          "name": "Update Notion Dashboard",
+          "type": "notion",
+          "config": {
+            "database_id": "{{ NOTION_PIPELINE_DB_ID }}",
+            "action": "sync",
+            "source": "{{ base44.pipeline }}"
+          }
+        },
+        {
+          "name": "Send Updates to Base44",
+          "type": "http",
+          "config": {
+            "method": "POST",
+            "url": "{{ BASE44_WEBHOOK_URL }}",
+            "headers": { "Authorization": "Bearer {{ BASE44_API_KEY }}" },
+            "body": {
+              "event": "orders_fulfilled",
+              "orders": "{{ shopify.recent_orders }}",
+              "timestamp": "{{ now }}"
+            }
+          }
+        },
+        {
+          "name": "Log Sync",
+          "type": "http",
+          "config": {
+            "method": "POST",
+            "url": "http://localhost:3000/agents/obsidian/write",
+            "body": {
+              "path": "Agents/Sessions/Base44/{{ now | date:'YYYY-MM-DD' }}.md",
+              "content": "# Base44 Sync — {{ now | date:'HH:mm SAST' }}\n\nPipeline Items: {{ base44.pipeline | length }}\nOrders Sent: {{ shopify.recent_orders | length }}\nStatus: ✅ Synced"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
