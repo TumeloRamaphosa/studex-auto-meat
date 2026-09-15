@@ -22,6 +22,7 @@ import { MCPBridge } from './lib/mcp-bridge.js';
 import { TaskQueue } from './lib/task-queue.js';
 import { ContentEngine } from './lib/content-engine.js';
 import { AgentWorkspace } from './lib/workspace.js';
+import { BuzzBridge } from './lib/buzz-bridge.js';
 import { WebSocketServer } from 'ws';
 import http from 'http';
 
