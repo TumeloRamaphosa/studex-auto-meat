@@ -1,5 +1,7 @@
 /** StudEx Meat / AutoMeat Phase 1 — example data only; no production identifiers. */
 
+import type { ApprovalSubject } from './approval-subject';
+
 export type AgentId = string;
 export type MissionId = string;
 export type TaskId = string;
@@ -70,18 +72,26 @@ export type ApprovalActionType =
   | 'FULFILLMENT'
   | 'REFUND';
 
-export type ApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+export type ApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CONSUMED';
+
+export type ApproverType = 'human';
 
 export interface Approval {
   id: ApprovalId;
   missionId: MissionId;
   actionType: ApprovalActionType;
   summary: string;
+  /** Bound subject (SKU, amount, message id, etc.) — must match exactly on use. */
+  subject: ApprovalSubject;
   status: ApprovalStatus;
   requestedByAgentId: AgentId;
-  decidedByAgentId: AgentId | null;
+  /** Human owner only for gated actions (never an agent id). */
+  decidedByApproverType: ApproverType | null;
+  decidedByApproverId: string | null;
   createdAt: string;
   decidedAt: string | null;
+  consumedAt: string | null;
+  consumedByAgentId: AgentId | null;
 }
 
 export type EvidenceKind = 'GENERAL' | 'PAYMENT_PROOF';
@@ -124,6 +134,8 @@ export type AuditEventKind =
   | 'MISSION_TRANSITION_REJECTED'
   | 'APPROVAL_REQUESTED'
   | 'APPROVAL_DECIDED'
+  | 'APPROVAL_CONSUMED'
+  | 'APPROVAL_DECISION_REJECTED'
   | 'ACTION_BLOCKED'
   | 'ACTION_EXECUTED'
   | 'SEED_COMPLETED';

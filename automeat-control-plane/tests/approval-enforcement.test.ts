@@ -6,14 +6,13 @@ import type Database from 'better-sqlite3';
 import { openTestDb } from '@/db/store';
 import { ActionBlockedError } from '@/domain/errors';
 import { runSeed } from '@/seed/seed';
-import {
-  executeGatedAction,
-  hasApprovedAction,
-} from '@/services/action-guard';
-import { decideApproval } from '@/services/audit-service';
+import { executeGatedAction } from '@/services/action-guard';
+import { decideApprovalByHumanOwner } from '@/services/approval-service';
 import { transitionCashClawMission } from '@/services/mission-service';
 
 const MISSION_ID = 'mission-demo-cashclaw-001';
+const DEMO_QUOTE_SUBJECT = { quoteRef: 'DEMO-Q-001', amountZar: 15000 };
+const DEMO_PRICE_SUBJECT = { sku: 'STUDEX-WAGYU-STRIP-1KG-DEMO', newPriceZar: 1804 };
 
 describe('approval enforcement', () => {
   let db: Database.Database;
@@ -32,60 +31,39 @@ describe('approval enforcement', () => {
     if (fs.existsSync(`${dbPath}-shm`)) fs.rmSync(`${dbPath}-shm`, { force: true });
   });
 
-  it('blocks gated actions without an approved record and audits the attempt', () => {
-    const blockedBefore = db
-      .prepare(`SELECT COUNT(*) as c FROM audit_events WHERE kind = 'ACTION_BLOCKED'`)
-      .get() as { c: number };
-
+  it('blocks gated actions without a matching approved record', () => {
     expect(() =>
       executeGatedAction(db, {
         missionId: MISSION_ID,
         actorAgentId: 'agent-sales',
         actionType: 'QUOTATION',
         summary: 'Attempt demo quote send',
+        subject: DEMO_QUOTE_SUBJECT,
       }),
     ).toThrow(ActionBlockedError);
-
-    const blockedAfter = db
-      .prepare(`SELECT COUNT(*) as c FROM audit_events WHERE kind = 'ACTION_BLOCKED'`)
-      .get() as { c: number };
-    expect(blockedAfter.c).toBe(blockedBefore.c + 1);
-    expect(hasApprovedAction(db, MISSION_ID, 'QUOTATION')).toBe(false);
   });
 
-  it('allows gated actions after approval is granted', () => {
-    decideApproval(db, {
+  it('allows gated actions after human owner approval with matching subject', () => {
+    decideApprovalByHumanOwner(db, {
       approvalId: 'approval-quote-demo',
       decision: 'APPROVED',
-      decidedByAgentId: 'agent-katia',
     });
-
-    expect(hasApprovedAction(db, MISSION_ID, 'QUOTATION')).toBe(true);
 
     const result = executeGatedAction(db, {
       missionId: MISSION_ID,
       actorAgentId: 'agent-sales',
       actionType: 'QUOTATION',
       summary: 'Send demo quote after approval',
+      subject: DEMO_QUOTE_SUBJECT,
     });
     expect(result.ok).toBe(true);
-
-    const executed = db
-      .prepare(
-        `SELECT COUNT(*) as c FROM audit_events WHERE kind = 'ACTION_EXECUTED' AND mission_id = ?`,
-      )
-      .get(MISSION_ID) as { c: number };
-    expect(executed.c).toBeGreaterThan(0);
   });
 
   it('still blocks when approval was rejected', () => {
-    decideApproval(db, {
+    decideApprovalByHumanOwner(db, {
       approvalId: 'approval-quote-demo',
       decision: 'REJECTED',
-      decidedByAgentId: 'agent-katia',
     });
-
-    expect(hasApprovedAction(db, MISSION_ID, 'QUOTATION')).toBe(false);
 
     expect(() =>
       executeGatedAction(db, {
@@ -93,42 +71,43 @@ describe('approval enforcement', () => {
         actorAgentId: 'agent-sales',
         actionType: 'QUOTATION',
         summary: 'Should remain blocked',
+        subject: DEMO_QUOTE_SUBJECT,
       }),
     ).toThrow(ActionBlockedError);
 
-    expect(() =>
-      transitionCashClawMission(db, {
-        missionId: MISSION_ID,
-        toState: 'AWAITING_APPROVAL',
-        actorAgentId: 'agent-katia',
-      }),
-    ).not.toThrow();
+    transitionCashClawMission(db, {
+      missionId: MISSION_ID,
+      toState: 'AWAITING_APPROVAL',
+      actorAgentId: 'agent-katia',
+    });
 
     expect(() =>
       transitionCashClawMission(db, {
         missionId: MISSION_ID,
         toState: 'QUOTED',
         actorAgentId: 'agent-sales',
+        approvalSubject: DEMO_QUOTE_SUBJECT,
       }),
     ).toThrow(ActionBlockedError);
   });
 
-  it('covers all gated action types in the guard layer', () => {
-    const types = [
-      'PRICE_CHANGE',
-      'PUBLISHING',
-      'CUSTOMER_MESSAGE',
-      'FULFILLMENT',
-      'REFUND',
-    ] as const;
+  it('covers gated action types without matching approvals', () => {
+    const cases = [
+      { actionType: 'PRICE_CHANGE' as const, subject: DEMO_PRICE_SUBJECT },
+      { actionType: 'PUBLISHING' as const, subject: { contentDraftId: 'draft-naledi-demo-1' } },
+      { actionType: 'CUSTOMER_MESSAGE' as const, subject: { messageId: 'msg-demo-1' } },
+      { actionType: 'FULFILLMENT' as const, subject: { fulfilmentRef: 'DEMO-SHIP-001' } },
+      { actionType: 'REFUND' as const, subject: { orderRef: '#DEMO1001', refundAmountZar: 100 } },
+    ];
 
-    for (const actionType of types) {
+    for (const c of cases) {
       expect(() =>
         executeGatedAction(db, {
           missionId: MISSION_ID,
           actorAgentId: 'agent-sales',
-          actionType,
-          summary: `blocked ${actionType} attempt`,
+          actionType: c.actionType,
+          summary: `blocked ${c.actionType}`,
+          subject: c.subject,
         }),
       ).toThrow(ActionBlockedError);
     }

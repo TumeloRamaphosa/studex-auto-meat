@@ -38,6 +38,17 @@ main {
   padding: 2rem 1.25rem 3rem;
 }
 
+.example-banner {
+  margin-bottom: 1.25rem;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  border: 1px solid #6b4423;
+  background: linear-gradient(90deg, #3d2918, #2a3544);
+  color: #ffd9b8;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
 header.page-header {
   margin-bottom: 1.75rem;
 }

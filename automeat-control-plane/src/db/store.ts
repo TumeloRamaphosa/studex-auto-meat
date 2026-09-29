@@ -18,7 +18,13 @@ import type {
   PaymentMethod,
   PaymentProofSource,
   Task,
+  AgentId,
 } from '@/domain/types';
+import type { ApprovalSubjectByAction } from '@/domain/approval-subject';
+import {
+  parseApprovalSubjectJson,
+  subjectsMatchForAction,
+} from '@/domain/approval-subject';
 import { parsePaymentMethod } from '@/domain/payment';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
@@ -173,6 +179,11 @@ function migrate(db: Database.Database): void {
   addColumnIfMissing(db, 'evidence', 'kind', "TEXT NOT NULL DEFAULT 'GENERAL'");
   addColumnIfMissing(db, 'evidence', 'payment_proof_source', 'TEXT');
   addColumnIfMissing(db, 'evidence', 'payment_reference', 'TEXT');
+  addColumnIfMissing(db, 'approvals', 'subject_json', "TEXT NOT NULL DEFAULT '{}'");
+  addColumnIfMissing(db, 'approvals', 'approver_type', 'TEXT');
+  addColumnIfMissing(db, 'approvals', 'approver_id', 'TEXT');
+  addColumnIfMissing(db, 'approvals', 'consumed_at', 'TEXT');
+  addColumnIfMissing(db, 'approvals', 'consumed_by_agent_id', 'TEXT');
 }
 
 export function resetDb(db: Database.Database): void {
@@ -236,16 +247,38 @@ export function rowToTask(row: Record<string, unknown>): Task {
 }
 
 export function rowToApproval(row: Record<string, unknown>): Approval {
+  const rawSubject = row.subject_json ? String(row.subject_json) : '{}';
+  let subject: Approval['subject'];
+  try {
+    subject = parseApprovalSubjectJson(rawSubject);
+  } catch {
+    subject = { actionType: 'QUOTATION', quoteRef: 'unknown', amountZar: 0 };
+  }
+  const approverId = row.approver_id
+    ? String(row.approver_id)
+    : row.decided_by_agent_id
+      ? String(row.decided_by_agent_id)
+      : null;
+  const approverType = row.approver_type
+    ? (String(row.approver_type) as Approval['decidedByApproverType'])
+    : approverId?.startsWith('human-')
+      ? 'human'
+      : null;
+
   return {
     id: String(row.id),
     missionId: String(row.mission_id),
     actionType: String(row.action_type) as ApprovalActionType,
     summary: String(row.summary),
+    subject,
     status: String(row.status) as ApprovalStatus,
     requestedByAgentId: String(row.requested_by_agent_id),
-    decidedByAgentId: row.decided_by_agent_id ? String(row.decided_by_agent_id) : null,
+    decidedByApproverType: approverType,
+    decidedByApproverId: approverId,
     createdAt: String(row.created_at),
     decidedAt: row.decided_at ? String(row.decided_at) : null,
+    consumedAt: row.consumed_at ? String(row.consumed_at) : null,
+    consumedByAgentId: row.consumed_by_agent_id ? String(row.consumed_by_agent_id) : null,
   };
 }
 
@@ -288,6 +321,13 @@ export function rowToAudit(row: Record<string, unknown>): AuditEvent {
     metadata: parseMetadata(String(row.metadata_json)),
     createdAt: String(row.created_at),
   };
+}
+
+export function getAgentById(db: Database.Database, id: AgentId): Agent | undefined {
+  const row = db.prepare('SELECT * FROM agents WHERE id = ?').get(id) as
+    | Record<string, unknown>
+    | undefined;
+  return row ? rowToAgent(row) : undefined;
 }
 
 export function listAgents(db: Database.Database): Agent[] {
@@ -353,15 +393,52 @@ export function findApprovedApproval(
   db: Database.Database,
   missionId: MissionId,
   actionType: ApprovalActionType,
+  subject: ApprovalSubjectByAction[ApprovalActionType],
 ): Approval | undefined {
-  const row = db
+  return findConsumableApproval(db, missionId, actionType, subject);
+}
+
+export function findConsumableApproval(
+  db: Database.Database,
+  missionId: MissionId,
+  actionType: ApprovalActionType,
+  subjectPayload: ApprovalSubjectByAction[typeof actionType],
+): Approval | undefined {
+  const rows = db
     .prepare(
       `SELECT * FROM approvals
        WHERE mission_id = ? AND action_type = ? AND status = 'APPROVED'
-       ORDER BY decided_at DESC LIMIT 1`,
+       ORDER BY decided_at DESC`,
     )
-    .get(missionId, actionType) as Record<string, unknown> | undefined;
-  return row ? rowToApproval(row) : undefined;
+    .all(missionId, actionType) as Record<string, unknown>[];
+
+  for (const row of rows) {
+    const approval = rowToApproval(row);
+    const json = row.subject_json ? String(row.subject_json) : '{}';
+    if (
+      subjectsMatchForAction(
+        actionType,
+        json,
+        subjectPayload as ApprovalSubjectByAction[ApprovalActionType],
+      )
+    ) {
+      return approval;
+    }
+  }
+  return undefined;
+}
+
+export function markApprovalConsumed(
+  db: Database.Database,
+  approvalId: string,
+  consumedByAgentId: AgentId,
+  consumedAt: string,
+): void {
+  db.prepare(
+    `UPDATE approvals
+     SET status = 'CONSUMED', consumed_at = ?, consumed_by_agent_id = ?
+     WHERE id = ? AND status = 'APPROVED'`,
+  ).run(consumedAt, consumedByAgentId, approvalId);
 }
 
 export function listEvidence(db: Database.Database, missionId?: MissionId): Evidence[] {
@@ -463,11 +540,14 @@ export function updateMissionState(
 export function updateApprovalDecision(
   db: Database.Database,
   approvalId: string,
-  status: Exclude<ApprovalStatus, 'PENDING'>,
-  decidedByAgentId: string,
+  status: Exclude<ApprovalStatus, 'PENDING' | 'CONSUMED'>,
+  approverType: 'human',
+  approverId: string,
   decidedAt: string,
 ): void {
   db.prepare(
-    `UPDATE approvals SET status = ?, decided_by_agent_id = ?, decided_at = ? WHERE id = ?`,
-  ).run(status, decidedByAgentId, decidedAt, approvalId);
+    `UPDATE approvals
+     SET status = ?, approver_type = ?, approver_id = ?, decided_by_agent_id = NULL, decided_at = ?
+     WHERE id = ?`,
+  ).run(status, approverType, approverId, decidedAt, approvalId);
 }

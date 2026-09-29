@@ -16,10 +16,13 @@ async function ensureSeeded(): Promise<void> {
 export default async function DashboardPage() {
   await ensureSeeded();
   const snapshot = loadDashboardSnapshot(getDb());
-  const orchestrator = snapshot.agents.find((a) => a.isOrchestrator);
 
   return (
     <main>
+      <div className="example-banner" role="status">
+        <strong>Example data only.</strong> Demo missions, prices, customers, payment references, and
+        mock Shopify catalog figures are synthetic — not live studexmeat.com production data.
+      </div>
       <header className="page-header">
         <h1>AutoMeat Control Plane</h1>
         <p>
@@ -153,21 +156,21 @@ export default async function DashboardPage() {
               <thead>
                 <tr>
                   <th>Action</th>
+                  <th>Subject (bound)</th>
                   <th>Summary</th>
-                  <th>Decision</th>
+                  <th>Owner decision</th>
                 </tr>
               </thead>
               <tbody>
                 {snapshot.pendingApprovals.map((a) => (
                   <tr key={a.id}>
                     <td>{a.actionType}</td>
+                    <td style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
+                      <code>{JSON.stringify(a.subject)}</code>
+                    </td>
                     <td style={{ fontSize: '0.85rem' }}>{a.summary}</td>
                     <td>
-                      {orchestrator ? (
-                        <ApprovalActions approval={a} orchestratorAgentId={orchestrator.id} />
-                      ) : (
-                        <span className="empty">No orchestrator configured</span>
-                      )}
+                      <ApprovalActions approval={a} />
                     </td>
                   </tr>
                 ))}

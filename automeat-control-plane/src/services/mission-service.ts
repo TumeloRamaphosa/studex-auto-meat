@@ -1,9 +1,7 @@
 import type Database from 'better-sqlite3';
 import { v4 as uuid } from 'uuid';
-import {
-  getMission,
-  insertAudit,
-  listAgents,
+import type { ApprovalSubjectByAction } from '@/domain/approval-subject';
+import { findConsumableApproval, getMission, insertAudit, listAgents,
   listApprovalsByStatus,
   listAssignments,
   listConnectorStatus,
@@ -26,15 +24,49 @@ import {
 } from '@/domain/payment';
 import type {
   AgentId,
+  ApprovalActionType,
   CashClawState,
   DashboardSnapshot,
   MissionId,
 } from '@/domain/types';
-import { executeGatedAction, hasApprovedAction } from '@/services/action-guard';
+import { executeGatedAction } from '@/services/action-guard';
 import { recordAudit } from '@/services/audit-service';
 import { assertPaymentProofForPaidTransition } from '@/services/evidence-service';
+import { consumeApprovalForAction } from '@/services/approval-service';
 
 const QUOTED_GATE = 'QUOTATION' as const;
+const FULFILLMENT_GATE = 'FULFILLMENT' as const;
+
+function blockTransitionMissingApproval(
+  db: Database.Database,
+  params: {
+    missionId: MissionId;
+    actorAgentId: AgentId;
+    from: CashClawState;
+    to: CashClawState;
+    actionType: typeof QUOTED_GATE | typeof FULFILLMENT_GATE;
+    subject?: ApprovalSubjectByAction[typeof QUOTED_GATE | typeof FULFILLMENT_GATE];
+    reason: string;
+  },
+): never {
+  recordAudit(db, {
+    kind: 'ACTION_BLOCKED',
+    missionId: params.missionId,
+    agentId: params.actorAgentId,
+    message: params.reason,
+    metadata: {
+      from: params.from,
+      to: params.to,
+      requiredApproval: params.actionType,
+      attemptedSubject: params.subject ?? null,
+    },
+  });
+  throw new ActionBlockedError(
+    params.actionType,
+    params.missionId,
+    params.reason,
+  );
+}
 
 export function transitionCashClawMission(
   db: Database.Database,
@@ -43,6 +75,8 @@ export function transitionCashClawMission(
     toState: CashClawState;
     actorAgentId: AgentId;
     reason?: string;
+    /** Required when transitioning to QUOTED (quotation subject) or FULFILLING (fulfilment ref). */
+    approvalSubject?: ApprovalSubjectByAction[ApprovalActionType];
   },
 ): { from: CashClawState; to: CashClawState } {
   const mission = getMission(db, params.missionId);
@@ -64,19 +98,66 @@ export function transitionCashClawMission(
     throw new InvalidTransitionError(from, to);
   }
 
-  if (to === 'QUOTED' && !hasApprovedAction(db, mission.id, QUOTED_GATE)) {
-    recordAudit(db, {
-      kind: 'ACTION_BLOCKED',
-      missionId: mission.id,
-      agentId: params.actorAgentId,
-      message: 'Blocked transition to QUOTED — quotation not approved',
-      metadata: { from, to, requiredApproval: QUOTED_GATE },
+  if (to === 'QUOTED') {
+    const subject = params.approvalSubject;
+    if (!subject || !('quoteRef' in subject)) {
+      blockTransitionMissingApproval(db, {
+        missionId: mission.id,
+        actorAgentId: params.actorAgentId,
+        from,
+        to,
+        actionType: QUOTED_GATE,
+        reason: 'QUOTED requires quotation approval subject (quoteRef, amountZar)',
+      });
+    }
+    const approval = findConsumableApproval(db, mission.id, QUOTED_GATE, subject);
+    if (!approval) {
+      blockTransitionMissingApproval(db, {
+        missionId: mission.id,
+        actorAgentId: params.actorAgentId,
+        from,
+        to,
+        actionType: QUOTED_GATE,
+        subject,
+        reason: 'Blocked transition to QUOTED — no matching unused quotation approval',
+      });
+    }
+    consumeApprovalForAction(db, {
+      approval: approval!,
+      actorAgentId: params.actorAgentId,
+      actionType: QUOTED_GATE,
     });
-    throw new ActionBlockedError(
-      QUOTED_GATE,
-      mission.id,
-      'quotation must be approved before QUOTED',
-    );
+  }
+
+  if (to === 'FULFILLING') {
+    const subject = params.approvalSubject;
+    if (!subject || !('fulfilmentRef' in subject)) {
+      blockTransitionMissingApproval(db, {
+        missionId: mission.id,
+        actorAgentId: params.actorAgentId,
+        from,
+        to,
+        actionType: FULFILLMENT_GATE,
+        reason: 'FULFILLING requires fulfilment approval subject (fulfilmentRef)',
+      });
+    }
+    const approval = findConsumableApproval(db, mission.id, FULFILLMENT_GATE, subject);
+    if (!approval) {
+      blockTransitionMissingApproval(db, {
+        missionId: mission.id,
+        actorAgentId: params.actorAgentId,
+        from,
+        to,
+        actionType: FULFILLMENT_GATE,
+        subject,
+        reason: 'Blocked transition to FULFILLING — no matching unused fulfilment approval',
+      });
+    }
+    consumeApprovalForAction(db, {
+      approval: approval!,
+      actorAgentId: params.actorAgentId,
+      actionType: FULFILLMENT_GATE,
+    });
   }
 
   if (to === 'PAID') {
@@ -141,6 +222,7 @@ export function applyPriceChange(
     actorAgentId: params.actorAgentId,
     actionType: 'PRICE_CHANGE',
     summary: `Example price change for ${params.sku} to R${params.newPriceZar} (demo)`,
+    subject: { sku: params.sku, newPriceZar: params.newPriceZar },
     metadata: { sku: params.sku, newPriceZar: params.newPriceZar },
   });
 }

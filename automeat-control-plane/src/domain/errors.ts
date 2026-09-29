@@ -30,3 +30,11 @@ export class NotFoundError extends Error {
     this.name = 'NotFoundError';
   }
 }
+
+export class ApprovalPolicyViolationError extends Error {
+  readonly code = 'APPROVAL_POLICY_VIOLATION' as const;
+  constructor(message: string) {
+    super(message);
+    this.name = 'ApprovalPolicyViolationError';
+  }
+}

@@ -6,6 +6,8 @@ import { getDb, getDbPath } from '@/db/store';
 import { createMissionAuditStub } from '@/services/mission-service';
 import { recordAudit } from '@/services/audit-service';
 import type { Agent, ApprovalActionType, CashClawState } from '@/domain/types';
+import type { ApprovalSubjectByAction } from '@/domain/approval-subject';
+import { subjectForAction, serializeApprovalSubject } from '@/domain/approval-subject';
 
 const AGENT_DEFINITIONS: Omit<Agent, 'createdAt'>[] = [
   {
@@ -185,6 +187,7 @@ function seedMission(db: Database.Database): void {
     summary: string;
     status: 'PENDING' | 'APPROVED';
     requestedBy: string;
+    subject: ApprovalSubjectByAction[ApprovalActionType];
   }[] = [
     {
       id: 'approval-price-demo',
@@ -192,6 +195,7 @@ function seedMission(db: Database.Database): void {
       summary: 'Example 5% striploin promo for demo corporate box (fake pricing).',
       status: 'PENDING',
       requestedBy: 'agent-sales',
+      subject: { sku: 'STUDEX-WAGYU-STRIP-1KG-DEMO', newPriceZar: 1804 },
     },
     {
       id: 'approval-quote-demo',
@@ -199,6 +203,7 @@ function seedMission(db: Database.Database): void {
       summary: 'Send example quotation PDF to fictional buyer (demo).',
       status: 'PENDING',
       requestedBy: 'agent-sales',
+      subject: { quoteRef: 'DEMO-Q-001', amountZar: 15000 },
     },
     {
       id: 'approval-publish-demo',
@@ -206,14 +211,29 @@ function seedMission(db: Database.Database): void {
       summary: 'Publish example social post about demo tasting box.',
       status: 'PENDING',
       requestedBy: 'agent-naledi',
+      subject: { contentDraftId: 'draft-naledi-demo-1' },
+    },
+    {
+      id: 'approval-fulfilment-demo',
+      actionType: 'FULFILLMENT',
+      summary: 'Release example cold-chain shipment for demo corporate box.',
+      status: 'PENDING',
+      requestedBy: 'agent-marcus',
+      subject: { fulfilmentRef: 'DEMO-SHIP-001' },
     },
   ];
 
   const insertApproval = db.prepare(
-    `INSERT INTO approvals (id, mission_id, action_type, summary, status, requested_by_agent_id, decided_by_agent_id, created_at, decided_at)
-     VALUES (@id, @missionId, @actionType, @summary, @status, @requestedBy, NULL, @createdAt, NULL)`,
+    `INSERT INTO approvals (
+      id, mission_id, action_type, summary, status, requested_by_agent_id,
+      decided_by_agent_id, subject_json, created_at, decided_at
+    ) VALUES (
+      @id, @missionId, @actionType, @summary, @status, @requestedBy,
+      NULL, @subjectJson, @createdAt, NULL
+    )`,
   );
   for (const a of approvals) {
+    const subjectJson = serializeApprovalSubject(subjectForAction(a.actionType, a.subject));
     insertApproval.run({
       id: a.id,
       missionId: MISSION_ID,
@@ -221,6 +241,7 @@ function seedMission(db: Database.Database): void {
       summary: a.summary,
       status: a.status,
       requestedBy: a.requestedBy,
+      subjectJson,
       createdAt: NOW,
     });
     recordAudit(db, {
@@ -228,7 +249,7 @@ function seedMission(db: Database.Database): void {
       missionId: MISSION_ID,
       agentId: a.requestedBy,
       message: `Approval requested: ${a.actionType}`,
-      metadata: { approvalId: a.id, actionType: a.actionType },
+      metadata: { approvalId: a.id, actionType: a.actionType, subject: subjectForAction(a.actionType, a.subject) },
     });
   }
 

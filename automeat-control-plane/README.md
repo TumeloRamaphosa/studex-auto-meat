@@ -83,12 +83,20 @@ Approvals are persisted records with types:
 - `FULFILLMENT`
 - `REFUND`
 
-**Gated actions** (price changes, quotations, publishing, customer messages, fulfilments, refunds) are enforced in `src/services/action-guard.ts`. Unless a matching **`APPROVED`** record exists for the mission and action type, the service:
+Each approval carries a **bound subject** (JSON) — e.g. SKU + price, quote ref + amount, fulfilment ref, message id, refund amount. Actions and state transitions must match that subject exactly.
+
+**Human owner only:** gated approvals are decided by **`human-owner-tumelo` (Tumelo, owner)** — never by agents. The dashboard “Approve as owner” button calls the API without agent credentials. Agent or self-approval attempts are rejected and audited (`APPROVAL_DECISION_REJECTED`).
+
+**Single-use:** when a gated action runs or a gated transition succeeds (`QUOTED`, `FULFILLING`), the matching approval moves to **`CONSUMED`** (`APPROVAL_CONSUMED` audit). It cannot authorize a second action.
+
+**Gated actions** are enforced in `src/services/action-guard.ts`. **`QUOTED`** and **`PAID → FULFILLING`** transitions enforce matching unused approvals in `src/services/mission-service.ts` (fulfilment can no longer skip approval).
+
+Unless a matching **`APPROVED`** (not yet consumed) record exists for the mission, action type, and subject:
 
 1. Throws `ActionBlockedError`
 2. Writes an `ACTION_BLOCKED` audit event
 
-`REJECTED` approvals do not satisfy the guard. The dashboard lets Katia approve or reject pending items; decisions persist via `/api/approvals/[id]`.
+`REJECTED` approvals do not satisfy the guard. The dashboard lets the human owner approve or reject pending items; decisions persist via `/api/approvals/[id]`.
 
 ## Shopify connector
 
