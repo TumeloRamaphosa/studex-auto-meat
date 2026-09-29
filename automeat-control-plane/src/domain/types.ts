@@ -1,0 +1,141 @@
+/** StudEx Meat / AutoMeat Phase 1 — example data only; no production identifiers. */
+
+export type AgentId = string;
+export type MissionId = string;
+export type TaskId = string;
+export type ApprovalId = string;
+export type EvidenceId = string;
+export type AuditEventId = string;
+
+export interface Agent {
+  id: AgentId;
+  name: string;
+  /** Stable role slug documented in README */
+  roleSlug: string;
+  roleTitle: string;
+  roleDescription: string;
+  isOrchestrator: boolean;
+  createdAt: string;
+}
+
+export type MissionType = 'CASHCLAW';
+
+export type CashClawState =
+  | 'INTAKE'
+  | 'QUALIFYING'
+  | 'SUPPLY_CHECK'
+  | 'PRICING_REVIEW'
+  | 'AWAITING_APPROVAL'
+  | 'QUOTED'
+  | 'ACCEPTED'
+  | 'PAID'
+  | 'FULFILLING'
+  | 'DELIVERED'
+  | 'FOLLOW_UP'
+  | 'COMPLETE';
+
+export interface Mission {
+  id: MissionId;
+  type: MissionType;
+  title: string;
+  description: string;
+  state: CashClawState;
+  leadAgentId: AgentId;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type TaskStatus = 'PENDING' | 'IN_PROGRESS' | 'DONE' | 'BLOCKED';
+
+export interface Task {
+  id: TaskId;
+  missionId: MissionId;
+  assigneeAgentId: AgentId;
+  title: string;
+  summary: string;
+  status: TaskStatus;
+  createdAt: string;
+}
+
+export type ApprovalActionType =
+  | 'PRICE_CHANGE'
+  | 'QUOTATION'
+  | 'PUBLISHING'
+  | 'CUSTOMER_MESSAGE'
+  | 'FULFILLMENT'
+  | 'REFUND';
+
+export type ApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+export interface Approval {
+  id: ApprovalId;
+  missionId: MissionId;
+  actionType: ApprovalActionType;
+  summary: string;
+  status: ApprovalStatus;
+  requestedByAgentId: AgentId;
+  decidedByAgentId: AgentId | null;
+  createdAt: string;
+  decidedAt: string | null;
+}
+
+export interface Evidence {
+  id: EvidenceId;
+  missionId: MissionId;
+  taskId: TaskId | null;
+  label: string;
+  uri: string;
+  notes: string;
+  createdAt: string;
+}
+
+export type ConnectorKind = 'SHOPIFY';
+
+export type ConnectorHealth = 'MOCK_CONNECTED' | 'DEGRADED' | 'DISCONNECTED';
+
+export interface ConnectorStatus {
+  id: string;
+  kind: ConnectorKind;
+  displayName: string;
+  mode: 'READ_ONLY_MOCK';
+  health: ConnectorHealth;
+  lastCheckedAt: string;
+  detail: string;
+}
+
+export type AuditEventKind =
+  | 'MISSION_CREATED'
+  | 'MISSION_STATE_CHANGED'
+  | 'MISSION_TRANSITION_REJECTED'
+  | 'APPROVAL_REQUESTED'
+  | 'APPROVAL_DECIDED'
+  | 'ACTION_BLOCKED'
+  | 'ACTION_EXECUTED'
+  | 'SEED_COMPLETED';
+
+export interface AuditEvent {
+  id: AuditEventId;
+  kind: AuditEventKind;
+  missionId: MissionId | null;
+  agentId: AgentId | null;
+  message: string;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface MissionAssignment {
+  missionId: MissionId;
+  agentId: AgentId;
+  roleOnMission: string;
+}
+
+export interface DashboardSnapshot {
+  agents: Agent[];
+  missions: Mission[];
+  tasks: Task[];
+  assignments: MissionAssignment[];
+  pendingApprovals: Approval[];
+  recentApprovals: Approval[];
+  connectorStatus: ConnectorStatus[];
+  recentAudit: AuditEvent[];
+}
