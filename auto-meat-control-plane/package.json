@@ -1,0 +1,35 @@
+{
+  "name": "@studex/auto-meat-control-plane",
+  "version": "1.0.0",
+  "private": true,
+  "description": "StudEx Meat Auto Meat Phase 1 control plane (drafts-only, approval-gated)",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node scripts/copy-static.mjs",
+    "lint": "eslint src tests --max-warnings 0",
+    "test": "vitest run",
+    "dev": "tsx src/cli.ts seed && tsx src/cli.ts serve",
+    "seed": "tsx src/cli.ts seed",
+    "serve": "tsx src/cli.ts serve"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.8.1",
+    "express": "^4.21.2"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.21.0",
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.13.10",
+    "eslint": "^9.21.0",
+    "globals": "^16.0.0",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2",
+    "typescript-eslint": "^8.26.0",
+    "vitest": "^3.0.8"
+  }
+}

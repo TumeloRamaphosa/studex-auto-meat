@@ -1,0 +1,80 @@
+:root {
+  font-family: system-ui, sans-serif;
+  color: #1a1a1a;
+  background: #f6f3ef;
+}
+
+body {
+  margin: 0 auto;
+  max-width: 1100px;
+  padding: 1.5rem;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 1.6rem;
+}
+
+.tagline {
+  color: #5c534a;
+  margin: 0.25rem 0 0.5rem;
+}
+
+.status {
+  font-size: 0.9rem;
+  color: #2d6a4f;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+.card {
+  background: #fff;
+  border: 1px solid #ddd5cb;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.card h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+.muted {
+  color: #6b635a;
+  font-size: 0.85rem;
+}
+
+.pill {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  background: #e8e0d6;
+}
+
+.pill.active {
+  background: #d8f3dc;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  background: #fff;
+}
+
+th,
+td {
+  border: 1px solid #ddd5cb;
+  padding: 0.4rem 0.5rem;
+  text-align: left;
+}
+
+th {
+  background: #efe8df;
+}

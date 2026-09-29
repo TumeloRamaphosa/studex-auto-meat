@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>StudEx Meat — Auto Meat Control Plane (Phase 1)</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Auto Meat Control Plane</h1>
+      <p class="tagline">StudEx Meat · drafts-only · approval-gated</p>
+      <p id="status" class="status">Loading persisted state…</p>
+    </header>
+    <main id="grid" class="grid"></main>
+    <section>
+      <h2>Recent audit</h2>
+      <table id="audit-table">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Action</th>
+            <th>Outcome</th>
+            <th>Message</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+    <script src="/dashboard.js" type="module"></script>
+  </body>
+</html>
