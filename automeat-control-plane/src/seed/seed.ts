@@ -12,54 +12,54 @@ const AGENT_DEFINITIONS: Omit<Agent, 'createdAt'>[] = [
     id: 'agent-katia',
     name: 'Katia',
     roleSlug: 'orchestrator',
-    roleTitle: 'Orchestrator / Mission Lead',
+    roleTitle: 'Orchestrator',
     roleDescription:
-      'Assigns missions, sets priorities, and approves cross-agent handoffs for StudEx Meat operations (example role).',
+      'Assigns missions to the agent team, sets priorities, and approves gated handoffs (example role).',
     isOrchestrator: true,
   },
   {
     id: 'agent-store',
     name: 'Store Agent',
     roleSlug: 'store',
-    roleTitle: 'Shopify Store Agent',
+    roleTitle: 'Shopify Store Reader',
     roleDescription:
-      'Read-only catalog and inventory checks against studexmeat.com via the mock Shopify connector (example role).',
+      'Reads studexmeat.com catalog and inventory through the read-only mock Shopify connector (example role).',
     isOrchestrator: false,
   },
   {
     id: 'agent-sales',
     name: 'Sales Agent',
     roleSlug: 'sales',
-    roleTitle: 'Quote-to-Cash Sales Agent',
+    roleTitle: 'CashClaw Sales',
     roleDescription:
-      'Runs CashClaw intake, qualification, and customer-facing quotes once approvals exist (example role).',
+      'Runs CashClaw deals from intake through qualification to quote (example role).',
     isOrchestrator: false,
   },
   {
     id: 'agent-naledi',
     name: 'Naledi',
-    roleSlug: 'influencer',
-    roleTitle: 'Influencer & Social Proof',
+    roleSlug: 'content',
+    roleTitle: 'Content Drafter',
     roleDescription:
-      'Prepares publish-ready content and social proof after publishing approvals (example role).',
+      'Drafts publish-ready content; publishing still requires explicit approval (example role).',
     isOrchestrator: false,
   },
   {
     id: 'agent-marcus',
     name: 'Marcus',
-    roleSlug: 'operations',
-    roleTitle: 'Fulfilment & Logistics',
+    roleSlug: 'fulfilment-proposed',
+    roleTitle: 'Fulfilment coordinator (proposed)',
     roleDescription:
-      'Plans cold-chain fulfilment and delivery updates once fulfilment approvals are granted (example role).',
+      'Proposed role — cold-chain fulfilment scheduling after PAID (pending owner confirmation).',
     isOrchestrator: false,
   },
   {
     id: 'agent-cipher',
     name: 'Cipher',
-    roleSlug: 'analytics',
-    roleTitle: 'Analytics & Compliance',
+    roleSlug: 'deal-desk-proposed',
+    roleTitle: 'Deal desk audit (proposed)',
     roleDescription:
-      'Validates pricing evidence, margin checks, and audit trails for CashClaw missions (example role).',
+      'Proposed role — pricing evidence and audit pack review for CashClaw (pending owner confirmation).',
     isOrchestrator: false,
   },
 ];
@@ -89,14 +89,15 @@ function seedMission(db: Database.Database): void {
   const state: CashClawState = 'PRICING_REVIEW';
 
   db.prepare(
-    `INSERT INTO missions (id, type, title, description, state, lead_agent_id, created_at, updated_at)
-     VALUES (@id, 'CASHCLAW', @title, @description, @state, @leadAgentId, @createdAt, @updatedAt)`,
+    `INSERT INTO missions (id, type, title, description, state, lead_agent_id, payment_method, created_at, updated_at)
+     VALUES (@id, 'CASHCLAW', @title, @description, @state, @leadAgentId, @paymentMethod, @createdAt, @updatedAt)`,
   ).run({
     id: MISSION_ID,
     title,
     description,
     state,
     leadAgentId: 'agent-katia',
+    paymentMethod: 'bank',
     createdAt: NOW,
     updatedAt: NOW,
   });
@@ -104,11 +105,17 @@ function seedMission(db: Database.Database): void {
   createMissionAuditStub(db, MISSION_ID, 'agent-katia', title);
 
   const assignments: { agentId: string; roleOnMission: string }[] = [
-    { agentId: 'agent-store', roleOnMission: 'Supply & SKU verification (mock Shopify read)' },
-    { agentId: 'agent-sales', roleOnMission: 'Customer qualification & quote drafting' },
-    { agentId: 'agent-naledi', roleOnMission: 'Optional social proof asset (pending publish approval)' },
-    { agentId: 'agent-marcus', roleOnMission: 'Fulfilment planning once paid' },
-    { agentId: 'agent-cipher', roleOnMission: 'Margin & audit evidence review' },
+    { agentId: 'agent-store', roleOnMission: 'Mock Shopify read — SKU / stock check' },
+    { agentId: 'agent-sales', roleOnMission: 'CashClaw intake → quote path' },
+    { agentId: 'agent-naledi', roleOnMission: 'Draft content (publish requires approval)' },
+    {
+      agentId: 'agent-marcus',
+      roleOnMission: 'Proposed fulfilment planning after PAID (pending owner confirmation)',
+    },
+    {
+      agentId: 'agent-cipher',
+      roleOnMission: 'Proposed deal-desk audit pack (pending owner confirmation)',
+    },
   ];
 
   const insertAssignment = db.prepare(
@@ -226,11 +233,15 @@ function seedMission(db: Database.Database): void {
   }
 
   db.prepare(
-    `INSERT INTO evidence (id, mission_id, task_id, label, uri, notes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO evidence (
+      id, mission_id, task_id, kind, payment_proof_source, payment_reference,
+      label, uri, notes, created_at
+    ) VALUES (?, ?, ?, ?, NULL, NULL, ?, ?, ?, ?)`,
   ).run(
     uuid(),
     MISSION_ID,
     'task-cipher-margin',
+    'GENERAL',
     'Example margin worksheet',
     'file://example/local/demo-margin.csv',
     'Synthetic numbers for demonstration only.',

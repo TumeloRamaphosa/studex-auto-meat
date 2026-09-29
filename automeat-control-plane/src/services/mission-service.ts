@@ -7,6 +7,7 @@ import {
   listApprovalsByStatus,
   listAssignments,
   listConnectorStatus,
+  listEvidence,
   listMissions,
   listRecentAudit,
   listTasks,
@@ -14,7 +15,15 @@ import {
   updateMissionState,
 } from '@/db/store';
 import { canTransitionCashClaw } from '@/domain/cashclaw-states';
-import { ActionBlockedError, InvalidTransitionError, NotFoundError } from '@/domain/errors';
+import {
+  ActionBlockedError,
+  InvalidTransitionError,
+  NotFoundError,
+} from '@/domain/errors';
+import {
+  MissingPaymentProofError,
+  PaymentProofMismatchError,
+} from '@/domain/payment';
 import type {
   AgentId,
   CashClawState,
@@ -23,6 +32,7 @@ import type {
 } from '@/domain/types';
 import { executeGatedAction, hasApprovedAction } from '@/services/action-guard';
 import { recordAudit } from '@/services/audit-service';
+import { assertPaymentProofForPaidTransition } from '@/services/evidence-service';
 
 const QUOTED_GATE = 'QUOTATION' as const;
 
@@ -69,6 +79,41 @@ export function transitionCashClawMission(
     );
   }
 
+  if (to === 'PAID') {
+    try {
+      const proof = assertPaymentProofForPaidTransition(db, mission.id, mission.paymentMethod);
+      recordAudit(db, {
+        kind: 'ACTION_EXECUTED',
+        missionId: mission.id,
+        agentId: params.actorAgentId,
+        message: 'Payment proof validated for PAID transition (mock reference only)',
+        metadata: {
+          evidenceId: proof.id,
+          paymentReference: proof.paymentReference,
+          paymentProofSource: proof.paymentProofSource,
+          paymentMethod: mission.paymentMethod,
+        },
+      });
+    } catch (e) {
+      if (e instanceof MissingPaymentProofError || e instanceof PaymentProofMismatchError) {
+        recordAudit(db, {
+          kind: 'MISSION_TRANSITION_REJECTED',
+          missionId: mission.id,
+          agentId: params.actorAgentId,
+          message: `Rejected transition ${from} → PAID — ${e.message}`,
+          metadata: {
+            from,
+            to,
+            reason:
+              e instanceof PaymentProofMismatchError ? 'payment_proof_mismatch' : 'missing_payment_proof',
+            paymentMethod: mission.paymentMethod,
+          },
+        });
+      }
+      throw e;
+    }
+  }
+
   const updatedAt = new Date().toISOString();
   updateMissionState(db, mission.id, to, updatedAt);
   recordAudit(db, {
@@ -106,6 +151,7 @@ export function loadDashboardSnapshot(db: Database.Database): DashboardSnapshot 
     missions: listMissions(db),
     tasks: listTasks(db),
     assignments: listAssignments(db),
+    evidence: listEvidence(db),
     pendingApprovals: listApprovalsByStatus(db, 'PENDING'),
     recentApprovals: db
       .prepare(

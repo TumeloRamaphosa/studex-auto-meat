@@ -39,6 +39,7 @@ export default async function DashboardPage() {
                 <tr>
                   <th>Title</th>
                   <th>State</th>
+                  <th>Payment</th>
                   <th>Lead</th>
                 </tr>
               </thead>
@@ -54,6 +55,7 @@ export default async function DashboardPage() {
                       <td>
                         <span className="badge state">{m.state}</span>
                       </td>
+                      <td>{m.paymentMethod}</td>
                       <td>{lead?.name ?? m.leadAgentId}</td>
                     </tr>
                   );

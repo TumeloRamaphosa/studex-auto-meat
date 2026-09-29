@@ -34,12 +34,17 @@ export type CashClawState =
   | 'FOLLOW_UP'
   | 'COMPLETE';
 
+/** Phase 1 payment rails — `shopify` checkout or `bank` EFT only (no crypto). */
+export type PaymentMethod = 'shopify' | 'bank';
+
 export interface Mission {
   id: MissionId;
   type: MissionType;
   title: string;
   description: string;
   state: CashClawState;
+  /** Expected settlement path for this CashClaw deal (default `bank`). */
+  paymentMethod: PaymentMethod;
   leadAgentId: AgentId;
   createdAt: string;
   updatedAt: string;
@@ -79,10 +84,20 @@ export interface Approval {
   decidedAt: string | null;
 }
 
+export type EvidenceKind = 'GENERAL' | 'PAYMENT_PROOF';
+
+/** Reference attached to `PAYMENT_PROOF` evidence (mock free-text; no live verification). */
+export type PaymentProofSource = 'shopify_order' | 'bank_confirmation';
+
 export interface Evidence {
   id: EvidenceId;
   missionId: MissionId;
   taskId: TaskId | null;
+  kind: EvidenceKind;
+  /** Set when kind is PAYMENT_PROOF */
+  paymentProofSource: PaymentProofSource | null;
+  /** Example Shopify order name or bank confirmation reference */
+  paymentReference: string | null;
   label: string;
   uri: string;
   notes: string;
@@ -134,6 +149,7 @@ export interface DashboardSnapshot {
   missions: Mission[];
   tasks: Task[];
   assignments: MissionAssignment[];
+  evidence: Evidence[];
   pendingApprovals: Approval[];
   recentApprovals: Approval[];
   connectorStatus: ConnectorStatus[];

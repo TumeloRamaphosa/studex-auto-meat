@@ -11,11 +11,15 @@ import type {
   CashClawState,
   ConnectorStatus,
   Evidence,
+  EvidenceKind,
   Mission,
   MissionAssignment,
   MissionId,
+  PaymentMethod,
+  PaymentProofSource,
   Task,
 } from '@/domain/types';
+import { parsePaymentMethod } from '@/domain/payment';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
 const DB_PATH = process.env.AUTOMEAT_DB_PATH ?? path.join(DATA_DIR, 'automeat.db');
@@ -56,6 +60,22 @@ export function closeDb(): void {
   if (dbSingleton) {
     dbSingleton.close();
     dbSingleton = null;
+  }
+}
+
+function columnNames(db: Database.Database, table: string): Set<string> {
+  const rows = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+  return new Set(rows.map((r) => r.name));
+}
+
+function addColumnIfMissing(
+  db: Database.Database,
+  table: string,
+  column: string,
+  definition: string,
+): void {
+  if (!columnNames(db, table).has(column)) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
   }
 }
 
@@ -148,6 +168,11 @@ function migrate(db: Database.Database): void {
       created_at TEXT NOT NULL
     );
   `);
+
+  addColumnIfMissing(db, 'missions', 'payment_method', "TEXT NOT NULL DEFAULT 'bank'");
+  addColumnIfMissing(db, 'evidence', 'kind', "TEXT NOT NULL DEFAULT 'GENERAL'");
+  addColumnIfMissing(db, 'evidence', 'payment_proof_source', 'TEXT');
+  addColumnIfMissing(db, 'evidence', 'payment_reference', 'TEXT');
 }
 
 export function resetDb(db: Database.Database): void {
@@ -184,12 +209,14 @@ export function rowToAgent(row: Record<string, unknown>): Agent {
 }
 
 export function rowToMission(row: Record<string, unknown>): Mission {
+  const rawMethod = row.payment_method ?? 'bank';
   return {
     id: String(row.id),
     type: 'CASHCLAW',
     title: String(row.title),
     description: String(row.description),
     state: String(row.state) as CashClawState,
+    paymentMethod: parsePaymentMethod(rawMethod),
     leadAgentId: String(row.lead_agent_id),
     createdAt: String(row.created_at),
     updatedAt: String(row.updated_at),
@@ -227,6 +254,11 @@ export function rowToEvidence(row: Record<string, unknown>): Evidence {
     id: String(row.id),
     missionId: String(row.mission_id),
     taskId: row.task_id ? String(row.task_id) : null,
+    kind: (row.kind ? String(row.kind) : 'GENERAL') as EvidenceKind,
+    paymentProofSource: row.payment_proof_source
+      ? (String(row.payment_proof_source) as PaymentProofSource)
+      : null,
+    paymentReference: row.payment_reference ? String(row.payment_reference) : null,
     label: String(row.label),
     uri: String(row.uri),
     notes: String(row.notes),
@@ -330,6 +362,55 @@ export function findApprovedApproval(
     )
     .get(missionId, actionType) as Record<string, unknown> | undefined;
   return row ? rowToApproval(row) : undefined;
+}
+
+export function listEvidence(db: Database.Database, missionId?: MissionId): Evidence[] {
+  if (missionId) {
+    return db
+      .prepare('SELECT * FROM evidence WHERE mission_id = ? ORDER BY created_at ASC')
+      .all(missionId)
+      .map((r) => rowToEvidence(r as Record<string, unknown>));
+  }
+  return db
+    .prepare('SELECT * FROM evidence ORDER BY created_at ASC')
+    .all()
+    .map((r) => rowToEvidence(r as Record<string, unknown>));
+}
+
+export function insertEvidence(db: Database.Database, evidence: Evidence): void {
+  db.prepare(
+    `INSERT INTO evidence (
+      id, mission_id, task_id, kind, payment_proof_source, payment_reference,
+      label, uri, notes, created_at
+    ) VALUES (
+      @id, @missionId, @taskId, @kind, @paymentProofSource, @paymentReference,
+      @label, @uri, @notes, @createdAt
+    )`,
+  ).run({
+    id: evidence.id,
+    missionId: evidence.missionId,
+    taskId: evidence.taskId,
+    kind: evidence.kind,
+    paymentProofSource: evidence.paymentProofSource,
+    paymentReference: evidence.paymentReference,
+    label: evidence.label,
+    uri: evidence.uri,
+    notes: evidence.notes,
+    createdAt: evidence.createdAt,
+  });
+}
+
+export function updateMissionPaymentMethod(
+  db: Database.Database,
+  missionId: MissionId,
+  paymentMethod: PaymentMethod,
+  updatedAt: string,
+): void {
+  db.prepare('UPDATE missions SET payment_method = ?, updated_at = ? WHERE id = ?').run(
+    paymentMethod,
+    updatedAt,
+    missionId,
+  );
 }
 
 export function listConnectorStatus(db: Database.Database): ConnectorStatus[] {

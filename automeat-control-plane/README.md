@@ -41,14 +41,24 @@ npm run seed
 
 | Agent | Role slug | Responsibility |
 |-------|-----------|----------------|
-| **Katia** | `orchestrator` | Mission lead — assigns work, approves gated actions |
-| **Store Agent** | `store` | Read-only Shopify catalog / inventory checks (mock connector) |
-| **Sales Agent** | `sales` | CashClaw intake, qualification, quotes (after approvals) |
-| **Naledi** | `influencer` | Social / publish assets (requires `PUBLISHING` approval) |
-| **Marcus** | `operations` | Fulfilment planning (requires `FULFILLMENT` approval) |
-| **Cipher** | `analytics` | Margin evidence and audit support |
+| **Katia** | `orchestrator` | Assigns missions to the team; approves gated actions |
+| **Store Agent** | `store` | Reads Shopify via the read-only mock connector |
+| **Sales Agent** | `sales` | Runs CashClaw deals from intake through quote |
+| **Naledi** | `content` | Drafts content; publishing requires `PUBLISHING` approval |
+| **Marcus** | `fulfilment-proposed` | **Proposed, pending owner confirmation** — fulfilment coordination after PAID |
+| **Cipher** | `deal-desk-proposed` | **Proposed, pending owner confirmation** — deal-desk audit / pricing evidence |
 
 Katia assigns mission `mission-demo-cashclaw-001` to all five agents with explicit `mission_assignments` roles.
+
+## Payments (Phase 1)
+
+- **No crypto / wallet / stablecoin paths.** Missions carry `payment_method`: only `shopify` or `bank` (seed default: `bank`). Other values are rejected in `setMissionPaymentMethod` with an `ACTION_BLOCKED` audit.
+- Transition to **`PAID`** requires attached **`PAYMENT_PROOF`** evidence with a mock free-text reference:
+  - `payment_method: bank` → evidence source `bank_confirmation`
+  - `payment_method: shopify` → evidence source `shopify_order`
+- No live payment verification — references are example strings only.
+
+Use `attachPaymentProof` in `src/services/evidence-service.ts` (or insert via API in later phases).
 
 ## CashClaw mission state machine
 
@@ -59,6 +69,8 @@ States (in order of typical flow):
 The **allowed transition map** is defined in `src/domain/cashclaw-states.ts` (`CASHCLAW_ALLOWED_TRANSITIONS`). Invalid transitions throw `InvalidTransitionError`, emit `MISSION_TRANSITION_REJECTED` audit events, and never mutate state.
 
 Moving to **`QUOTED`** additionally requires an **`APPROVED`** approval with action type **`QUOTATION`**.
+
+Moving to **`PAID`** requires **`PAYMENT_PROOF`** evidence matching the mission `payment_method` (see Payments above). Missing or mismatched proof emits `MISSION_TRANSITION_REJECTED` and does not change state.
 
 ## Approval model
 
