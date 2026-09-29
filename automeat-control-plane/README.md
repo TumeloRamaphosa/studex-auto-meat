@@ -98,6 +98,17 @@ Unless a matching **`APPROVED`** (not yet consumed) record exists for the missio
 
 `REJECTED` approvals do not satisfy the guard. The dashboard lets the human owner approve or reject pending items; decisions persist via `/api/approvals/[id]`.
 
+## Known limitation / Phase 2 requirement
+
+**Owner approval is not authenticated in Phase 1.** `POST /api/approvals/[id]` rejects bodies that include `decidedByAgentId`, but any caller that omits that field is treated as the human owner (Tumelo) with **no login, session, or signed token**. The domain layer records `human-owner-tumelo` on approve/reject, yet **nothing verifies that the HTTP client is actually the owner**. That is acceptable for a **local example-data demo** only: if an agent (or any process) can reach this API, it could approve its own pending request by posting `{ "decision": "APPROVED" }` without identifying itself as an agent in the payload.
+
+**Before real prices, quotations, refunds, publishing, customer messages, or fulfilments**, approval decisions must require a **real owner check**, for example:
+
+- An owner login session (cookie or OIDC) bound to Tumelo (or delegated owners), or
+- A signed owner token / secret stored **outside agent reach** (env, HSM, identity provider), verified on every approval POST.
+
+Each decision should audit the **authenticated identity** (subject, session id, or token fingerprint)—not only the static `human-owner-tumelo` label.
+
 ## Shopify connector
 
 `src/connectors/shopify-mock.ts` implements a **read-only** interface (`getProducts`, `getProductBySku`, `getOrders`) over in-memory example products/orders. There are **no write methods**, **no network calls**, and **no Shopify credentials**.

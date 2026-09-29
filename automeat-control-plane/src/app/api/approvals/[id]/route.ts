@@ -5,6 +5,9 @@ import { ApprovalPolicyViolationError } from '@/domain/errors';
 
 export const dynamic = 'force-dynamic';
 
+// TODO(Phase 2): Authenticate owner before decideApprovalByHumanOwner (session or signed
+// owner token); audit verified identity. Omitting decidedByAgentId is NOT proof of owner.
+
 export async function POST(
   request: Request,
   context: { params: Promise<{ id: string }> },
