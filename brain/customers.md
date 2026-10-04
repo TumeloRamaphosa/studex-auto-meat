@@ -1,6 +1,7 @@
 ---
 title: customers.md — StudEx Meat audience
 type: brain
+source: Notion (Studex Meat, Verticals Overview, ME Buyer RFQ PRD)
 updated: 2026-10-04
 ---
 
@@ -8,12 +9,22 @@ updated: 2026-10-04
 
 > Agents read this before targeting, outreach, or messaging.
 
-- **Primary audience**: [TODO — e.g. SA households wanting traceable meat / restaurants / braai culture]
-- **Region(s)**: [TODO — cities / delivery zones, South Africa]
-- **Languages**: [TODO — English / isiZulu / Afrikaans]
-- **Segments**: [TODO — promote from research]
-- **Channels** (per businesses.json): WhatsApp · Instagram · AgentMail (+ [TODO: TikTok/FB/YouTube])
+## B2C (direct)
+- Premium beef buyers in South Africa; **Halaal-observant** consumers; biltong/braai culture;
+  health/protein-conscious (52g protein/70g pack angle).
+- Region: South Africa (base: Johannesburg). [TODO: delivery zones/cities]
+
+## B2B (wholesale)
+- Institutional buyers, **restaurants**, **government procurement**.
+- Export: **Middle East / Gulf** buyers (RFQ configurator; Halaal + Certified SA Wagyu marble 3+).
+
+## Channels (per businesses.json + ops)
+- WhatsApp (Amara support / Hermes sales) · Instagram · AgentMail · + 6-platform social (Blotato).
+- [TODO: confirm TikTok / Facebook / YouTube / LinkedIn handles]
+
+## Languages
+- English (primary) · Afrikaans (Emily persona / farm origin) · [TODO: isiZulu?]
 
 ## Compliance — POPIA (owned by claudio-cto)
 Only contact people with a lawful basis (existing customers / opt-ins). Every outbound message
-includes an opt-out. No cold scraping. WhatsApp blasts are human-gated.
+includes an opt-out. No cold scraping. WhatsApp blasts and calling (Charlie) are human-gated.
