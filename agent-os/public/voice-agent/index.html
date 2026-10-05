@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>STUDEX MEAT - Voice Sales Agent</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+      color: #fff;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 600px;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      padding: 40px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .logo {
+      font-size: 48px;
+      margin-bottom: 10px;
+    }
+
+    h1 {
+      font-size: 28px;
+      margin-bottom: 5px;
+      background: linear-gradient(135deg, #ff6b6b, #ee5a6f);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .tagline {
+      color: #aaa;
+      font-size: 14px;
+    }
+
+    .chat-window {
+      height: 400px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .message {
+      display: flex;
+      gap: 10px;
+      animation: slideIn 0.3s ease-out;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .message.user {
+      justify-content: flex-end;
+    }
+
+    .message.agent {
+      justify-content: flex-start;
+    }
+
+    .message-bubble {
+      max-width: 80%;
+      padding: 12px 16px;
+      border-radius: 12px;
+      word-wrap: break-word;
+    }
+
+    .user .message-bubble {
+      background: linear-gradient(135deg, #ff6b6b, #ee5a6f);
+      color: white;
+    }
+
+    .agent .message-bubble {
+      background: rgba(255, 255, 255, 0.1);
+      color: #ddd;
+    }
+
+    .input-area {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    input[type="email"],
+    input[type="text"] {
+      flex: 1;
+      padding: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      color: white;
+      font-size: 14px;
+    }
+
+    input::placeholder {
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      flex: 1;
+      min-width: 120px;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .btn-voice {
+      background: linear-gradient(135deg, #ff6b6b, #ee5a6f);
+      color: white;
+    }
+
+    .btn-voice:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px rgba(255, 107, 107, 0.3);
+    }
+
+    .btn-voice.recording {
+      animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.05);
+      }
+    }
+
+    .btn-text {
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-text:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    .status {
+      font-size: 12px;
+      color: #aaa;
+      text-align: center;
+      margin-top: 10px;
+      height: 20px;
+    }
+
+    .status.listening {
+      color: #ff6b6b;
+      animation: blink 1s infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      color: #aaa;
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .mic-icon {
+      display: inline-block;
+      margin-right: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">🥩</div>
+      <h1>STUDEX MEAT</h1>
+      <p class="tagline">Premium South African Meat • Voice-Enabled Sales</p>
+    </div>
+
+    <div class="form-group">
+      <label>Your Email</label>
+      <input type="email" id="buyerEmail" placeholder="you@example.com">
+    </div>
+
+    <div class="form-group">
+      <label>Your Name</label>
+      <input type="text" id="buyerName" placeholder="Your name">
+    </div>
+
+    <div class="chat-window" id="chatWindow">
+      <div class="message agent">
+        <div class="message-bubble">👋 Hi! Click the mic to start talking to me. I'm here to help with your meat order.</div>
+      </div>
+    </div>
+
+    <div class="input-area">
+      <input type="text" id="textInput" placeholder="Or type a message...">
+      <button class="btn-text" onclick="sendText()">Send</button>
+    </div>
+
+    <div class="controls">
+      <button class="btn-voice" id="voiceBtn" onclick="toggleVoice()">
+        <span class="mic-icon">🎤</span> <span id="voiceLabel">Start Listening</span>
+      </button>
+      <button class="btn-text" onclick="endSession()">End & Email Confirmation</button>
+    </div>
+
+    <div class="status" id="status"></div>
+  </div>
+
+  <script>
+    let isRecording = false;
+    let sessionId = null;
+    let mediaRecorder = null;
+    let audioChunks = [];
+
+    const API_URL = '/agents/voice-sales';
+    const chatWindow = document.getElementById('chatWindow');
+    const voiceBtn = document.getElementById('voiceBtn');
+    const status = document.getElementById('status');
+    const buyerEmail = document.getElementById('buyerEmail');
+    const buyerName = document.getElementById('buyerName');
+    const textInput = document.getElementById('textInput');
+
+    // Initialize session on page load
+    window.addEventListener('load', async () => {
+      const email = prompt('Your email?') || 'unknown@example.com';
+      const name = prompt('Your name?') || 'Guest';
+      buyerEmail.value = email;
+      buyerName.value = name;
+
+      // Start session
+      const response = await fetch(`${API_URL}/session`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ buyer_email: email, buyer_name: name }),
+      });
+
+      const data = await response.json();
+      sessionId = data.session_id;
+
+      // Show greeting
+      addMessage('agent', data.greeting);
+      updateStatus(`Session started. Session ID: ${sessionId.substring(0, 12)}...`);
+    });
+
+    async function toggleVoice() {
+      if (!isRecording) {
+        startRecording();
+      } else {
+        stopRecording();
+      }
+    }
+
+    async function startRecording() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+
+        mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
+        mediaRecorder.onstop = async () => {
+          const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+          const base64Audio = await blobToBase64(audioBlob);
+          await sendVoice(base64Audio);
+        };
+
+        mediaRecorder.start();
+        isRecording = true;
+        voiceBtn.classList.add('recording');
+        document.getElementById('voiceLabel').textContent = 'Stop Listening';
+        updateStatus('🎤 Listening...');
+      } catch (error) {
+        updateStatus('❌ Microphone access denied');
+      }
+    }
+
+    function stopRecording() {
+      mediaRecorder.stop();
+      isRecording = false;
+      voiceBtn.classList.remove('recording');
+      document.getElementById('voiceLabel').textContent = 'Start Listening';
+      updateStatus('Processing...');
+    }
+
+    async function sendVoice(audioBase64) {
+      try {
+        const response = await fetch(`${API_URL}/transcribe`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            audio_base64: audioBase64,
+            session_id: sessionId,
+            buyer_email: buyerEmail.value,
+            transcribed_text: 'Voice input (would be transcribed server-side)',
+          }),
+        });
+
+        const data = await response.json();
+        addMessage('agent', data.agent_response);
+        updateStatus('Ready');
+      } catch (error) {
+        updateStatus('❌ Error: ' + error.message);
+      }
+    }
+
+    async function sendText() {
+      const message = textInput.value.trim();
+      if (!message) return;
+
+      addMessage('user', message);
+      textInput.value = '';
+
+      try {
+        const response = await fetch(`${API_URL}/transcribe`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            session_id: sessionId,
+            buyer_email: buyerEmail.value,
+            transcribed_text: message,
+          }),
+        });
+
+        const data = await response.json();
+        addMessage('agent', data.agent_response);
+      } catch (error) {
+        addMessage('agent', '❌ Error: ' + error.message);
+      }
+    }
+
+    async function endSession() {
+      try {
+        const response = await fetch(`${API_URL}/end-session`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            session_id: sessionId,
+            buyer_email: buyerEmail.value,
+            order_summary: { timestamp: new Date().toISOString() },
+          }),
+        });
+
+        const data = await response.json();
+        addMessage('agent', '✉️ Confirmation email sent! We\'ll be in touch shortly.');
+        updateStatus('Session ended');
+      } catch (error) {
+        addMessage('agent', '❌ Error: ' + error.message);
+      }
+    }
+
+    function addMessage(role, text) {
+      const msgDiv = document.createElement('div');
+      msgDiv.className = `message ${role}`;
+      msgDiv.innerHTML = `<div class="message-bubble">${text}</div>`;
+      chatWindow.appendChild(msgDiv);
+      chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
+
+    function updateStatus(text) {
+      status.textContent = text;
+    }
+
+    function blobToBase64(blob) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result.split(',')[1]);
+        reader.readAsDataURL(blob);
+      });
+    }
+
+    // Allow Enter key in text input
+    textInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') sendText();
+    });
+  </script>
+</body>
+</html>
