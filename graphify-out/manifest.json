@@ -1,0 +1,200 @@
+{
+  "agent-os/lib/agent-registry.js": {
+    "mtime": 1789308499.834025,
+    "seen": 1790075133.759996,
+    "ast_hash": "70bbcd3e154ddd2e7783b4910736c988",
+    "semantic_hash": ""
+  },
+  "agent-os/lib/buzz-bridge.js": {
+    "mtime": 1789461115.9440913,
+    "seen": 1790075133.76,
+    "ast_hash": "284acd7e7c8bef6f963b288e25d1c180",
+    "semantic_hash": ""
+  },
+  "agent-os/lib/content-engine.js": {
+    "mtime": 1789308530.9661977,
+    "seen": 1790075133.7600021,
+    "ast_hash": "63a734e5c1264c1fe728dde6d15dc395",
+    "semantic_hash": ""
+  },
+  "agent-os/lib/mcp-bridge.js": {
+    "mtime": 1789308553.9087102,
+    "seen": 1790075133.760003,
+    "ast_hash": "85a242a7d58811067de8a21e8ceac9b6",
+    "semantic_hash": ""
+  },
+  "agent-os/lib/model-loader.js": {
+    "mtime": 1789461189.5175717,
+    "seen": 1790075133.760004,
+    "ast_hash": "8fdf3495e2763948fda3ff020660e001",
+    "semantic_hash": ""
+  },
+  "agent-os/lib/task-queue.js": {
+    "mtime": 1789308592.20182,
+    "seen": 1790075133.7600052,
+    "ast_hash": "ac30e9fd13015a25efe792e39ea71fa1",
+    "semantic_hash": ""
+  },
+  "agent-os/lib/workspace.js": {
+    "mtime": 1789308710.112344,
+    "seen": 1790075133.7600052,
+    "ast_hash": "c133f1903f58ba6541d4d64ac0dedc2e",
+    "semantic_hash": ""
+  },
+  "agent-os/n8n-workflows.json": {
+    "mtime": 1789308843.875329,
+    "seen": 1790075133.760006,
+    "ast_hash": "7d69d43e1d734a37e984973a4c5d9eb8",
+    "semantic_hash": ""
+  },
+  "agent-os/package.json": {
+    "mtime": 1789308337.051102,
+    "seen": 1790075133.760007,
+    "ast_hash": "e8cfd59a2bc85ae53dcd479c1f9e1f18",
+    "semantic_hash": ""
+  },
+  "agent-os/railway.json": {
+    "mtime": 1789340957.4237597,
+    "seen": 1790075133.760007,
+    "ast_hash": "0e7eb099aa997c26f182e78240de181f",
+    "semantic_hash": ""
+  },
+  "agent-os/server.js": {
+    "mtime": 1789461144.804502,
+    "seen": 1790075133.7600079,
+    "ast_hash": "3035e7ad6fff92f332c006be8ca2b98a",
+    "semantic_hash": ""
+  },
+  "agent-os/setup-google-drive.py": {
+    "mtime": 1790007491.9754736,
+    "seen": 1790075133.760009,
+    "ast_hash": "52d51d03c4142fb29b422365b5383720",
+    "semantic_hash": ""
+  },
+  "agent-os/start-video-production.sh": {
+    "mtime": 1789748090.3587673,
+    "seen": 1790075133.760009,
+    "ast_hash": "6d8ff305ac6ec0c2d941ff5a3b9f262a",
+    "semantic_hash": ""
+  },
+  "agent-os/video-production-pipeline.js": {
+    "mtime": 1789748048.4018712,
+    "seen": 1790075133.76001,
+    "ast_hash": "3c92b95d680ec4f8e6ab529b79ebe3ec",
+    "semantic_hash": ""
+  },
+  "store/shopify.mjs": {
+    "mtime": 1790075130.76793,
+    "seen": 1790075133.76001,
+    "ast_hash": "b94426eaaeaa9df2c8d71a6ac1364a2c",
+    "semantic_hash": ""
+  },
+  "store/shopify.test.mjs": {
+    "mtime": 1790075140.9670093,
+    "seen": 1790075150.6844108,
+    "ast_hash": "a50745b596b6ca78d3ad8d5a46921580",
+    "semantic_hash": ""
+  },
+  "vercel.json": {
+    "mtime": 1782189079.4298432,
+    "seen": 1790075133.7600121,
+    "ast_hash": "c212a743accd998af98035f4c3356fcd",
+    "semantic_hash": ""
+  },
+  "workflows/n8n-naledi-post-workflow.json": {
+    "mtime": 1782189079.4299765,
+    "seen": 1790075133.7600121,
+    "ast_hash": "25ed86b38738e580331c28615a11b65c",
+    "semantic_hash": ""
+  },
+  "Auto-Meat-Command-Centre-ULTIMATE.html": {
+    "mtime": 1782189079.407327,
+    "seen": 1790075133.760013,
+    "ast_hash": "10c021c2290e6184af0f509aaf5bec8d",
+    "semantic_hash": ""
+  },
+  "MASTER-AI-OS-PLAN.md": {
+    "mtime": 1789470770.9701118,
+    "seen": 1790075133.760014,
+    "ast_hash": "912884e3b6a13c11767a4b2b95cae2f4",
+    "semantic_hash": ""
+  },
+  "MASTER_PLAN.md": {
+    "mtime": 1782189079.4074225,
+    "seen": 1790075133.760014,
+    "ast_hash": "8cd302f68549ffad10c2f96765b9f80f",
+    "semantic_hash": ""
+  },
+  "MINDMAP.md": {
+    "mtime": 1782189079.4075563,
+    "seen": 1790075133.760015,
+    "ast_hash": "e8f70d6ada927ae6047679a9eca7b0fd",
+    "semantic_hash": ""
+  },
+  "NALEDI.md": {
+    "mtime": 1782189079.4076493,
+    "seen": 1790075133.760016,
+    "ast_hash": "af9ec69f49efb429ca2a55b314db9847",
+    "semantic_hash": ""
+  },
+  "agent-os/PLAN.md": {
+    "mtime": 1789308651.5795214,
+    "seen": 1790075133.760016,
+    "ast_hash": "6ff8b41f80c11374c70544da5738cdcf",
+    "semantic_hash": ""
+  },
+  "agent-os/README.md": {
+    "mtime": 1789457015.732034,
+    "seen": 1790075133.760017,
+    "ast_hash": "99648ee045dff9d9104c637381a113d8",
+    "semantic_hash": ""
+  },
+  "agent-os/scripts/Episode-001-Ecosystem-Overview.md": {
+    "mtime": 1789748077.9424264,
+    "seen": 1790075133.760017,
+    "ast_hash": "91199ab650f1db40d19d282968e23c8c",
+    "semantic_hash": ""
+  },
+  "board/gobot-charter.md": {
+    "mtime": 1782189079.407786,
+    "seen": 1790075133.7600179,
+    "ast_hash": "3e4c10e47de632183b22d015c596ea62",
+    "semantic_hash": ""
+  },
+  "index.html": {
+    "mtime": 1782189079.4078722,
+    "seen": 1790075133.7600188,
+    "ast_hash": "92e01f081c25d3392f2f638a2a471718",
+    "semantic_hash": ""
+  },
+  "skills/naledi-influencer-creator/SKILL.md": {
+    "mtime": 1782189079.429758,
+    "seen": 1790075133.7600188,
+    "ast_hash": "5e033afb29b30ee9650520204647ac54",
+    "semantic_hash": ""
+  },
+  "store/README.md": {
+    "mtime": 1790075130.919065,
+    "seen": 1790075133.76002,
+    "ast_hash": "c39407d033263a7e8f77d4ef81e5b9b8",
+    "semantic_hash": ""
+  },
+  "naledi-images/naledi-kitchen-01.png": {
+    "mtime": 1782189079.414886,
+    "seen": 1790075133.76002,
+    "ast_hash": "c14c9c29fe57157ead22dde56dcedd6f",
+    "semantic_hash": ""
+  },
+  "naledi-images/naledi-lab-01.png": {
+    "mtime": 1782189079.4220994,
+    "seen": 1790075133.760021,
+    "ast_hash": "e7a36be98a87b18b097204358cd28195",
+    "semantic_hash": ""
+  },
+  "naledi-images/naledi-squash-01.png": {
+    "mtime": 1782189079.4294083,
+    "seen": 1790075133.760022,
+    "ast_hash": "bf49c2c653d5a9c1d2fc3976b03f99e9",
+    "semantic_hash": ""
+  }
+}
