@@ -12,6 +12,7 @@ const express = require('express');
 const { Ollama } = require('ollama');
 const nodemailer = require('nodemailer');
 const obsidian = require('./obsidian-bridge');
+const muse = require('./muse-integration');
 const router = express.Router();
 
 // Initialize Ollama (local model)
@@ -39,9 +40,10 @@ const AGENT_CONFIG = {
     'order_qualification',
     'email_confirmation',
     'obsidian_learning',
+    'image_generation_muse',
   ],
   model: process.env.LLM_MODEL || 'qwen2.5',
-  description: 'Voice-enabled customer support for STUDEX MEAT. Speaks with buyers, learns from history.',
+  description: 'Voice-enabled customer support for STUDEX MEAT. Speaks with buyers, learns from history, generates product visuals.',
 };
 
 /**
@@ -83,16 +85,27 @@ Keep responses short and natural (like speaking to them).`;
 
     const agentResponse = response.response.trim();
 
-    // 5. Log to Obsidian (learning)
+    // 5. Generate product images if they asked about products
+    let images = [];
+    const productKeywords = ['wagyu', 'biltong', 'sirloin', 'ribeye', 'meat', 'cut', 'product'];
+    const mentionedProduct = productKeywords.find(k => userMessage.toLowerCase().includes(k));
+
+    if (mentionedProduct) {
+      console.log(`🎨 Generating Meta Muse images for: ${mentionedProduct}`);
+      images = await muse.generateContextualImages(userMessage, mentionedProduct);
+    }
+
+    // 6. Log to Obsidian (learning)
     await obsidian.logInteraction({
       buyer_email,
       session_id,
       buyer_message: userMessage,
       agent_response: agentResponse,
+      images_generated: images.length,
       timestamp: new Date().toISOString(),
     });
 
-    // 6. Check if they want email confirmation
+    // 7. Check if they want email confirmation
     const needsEmail = agentResponse.toLowerCase().includes('email') ||
                        req.body.request_email_confirmation;
 
@@ -105,6 +118,8 @@ Keep responses short and natural (like speaking to them).`;
       session_id,
       needs_email_confirmation: needsEmail,
       obsidian_context_used: !!obsidianContext,
+      images: images,
+      muse_generated: images.length > 0,
     });
   } catch (error) {
     console.error('Voice transcribe error:', error);
